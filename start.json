@@ -1,0 +1,483 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "domainName": {
+      "type": "string",
+      "metadata": {
+        "description": "The FQDN of the AD Domain created "
+      },
+      "defaultValue": "corp.acme.com"
+    },
+    "AdminUserName": {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue": "sysadmin"
+    },
+    "AdminPassword": {
+      "type": "securestring"
+    },
+    "acme-dc01Name": {
+      "type": "string",
+      "defaultValue": "acme-dc01",
+      "minLength": 1
+    },
+
+    "storageAccounts_o365labbdiag_name": {
+      "defaultValue": "o365labbdiag",
+      "type": "String"
+    },
+    "virtualNetworks_O365Labb_vnet_name": {
+      "defaultValue": "O365Labb-vnet",
+      "type": "String"
+    },
+    "networkInterfaces_acme_dc01231_name": {
+      "defaultValue": "acme-dc01231",
+      "type": "String"
+    },
+    "publicIPAddresses_acme_dc01_ip_name": {
+      "defaultValue": "acme-dc01-ip",
+      "type": "String"
+    },
+    "networkSecurityGroups_acme_dc01_nsg_name": {
+      "defaultValue": "acme-dc01-nsg",
+      "type": "String"
+    },
+    "schedules_shutdown_computevm_acme_dc01_name": {
+      "defaultValue": "shutdown-computevm-acme-dc01",
+      "type": "String"
+    },
+    "subnets_default_name": {
+      "defaultValue": "default",
+      "type": "String"
+    },
+    "securityRules_RDP_name": {
+      "defaultValue": "RDP",
+      "type": "String"
+    },
+    "virtualMachines_acme_dc01_id": {
+      "defaultValue": "/subscriptions/522cefb5-f9fa-4cb4-9006-46643318ac64/resourceGroups/O365Labb/providers/Microsoft.Compute/disks/acme-dc01_OsDisk_1_ed3933e713e84f5ca4a3f59e54819b4f",
+      "type": "String"
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('acme-dc01Name')]",
+      "apiVersion": "2018-10-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_DS1_v2"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2019-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "osType": "Windows",
+            "name": "[concat(parameters('acme-dc01Name'),'_OsDisk_1_eed12')]",
+            "createOption": "FromImage",
+            "caching": "ReadWrite",
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS",
+              "id": "[parameters('virtualMachines_acme_dc01_id')]"
+            },
+            "diskSizeGB": 127
+          },
+          "dataDisks": []
+        },
+        "osProfile": {
+          "computerName": "[parameters('acme-dc01Name')]",
+          "adminUsername": "sysadmin",
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "enableAutomaticUpdates": true
+          },
+          "secrets": [],
+          "allowExtensionOperations": true
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_acme_dc01231_name'))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[concat('https', '://', parameters('storageAccounts_o365labbdiag_name'), '.blob.core.windows.net', '/')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_acme_dc01231_name'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_o365labbdiag_name'))]"
+      ]
+    },
+    {
+      "type": "microsoft.devtestlab/schedules",
+      "name": "[parameters('schedules_shutdown_computevm_acme_dc01_name')]",
+      "apiVersion": "2016-05-15",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "status": "Enabled",
+        "taskType": "ComputeVmShutdownTask",
+        "dailyRecurrence": {
+          "time": "1800"
+        },
+        "timeZoneId": "W. Europe Standard Time",
+        "notificationSettings": {
+          "status": "Disabled",
+          "timeInMinutes": 30
+        },
+        "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_acme_dc01_name'))]",
+        "provisioningState": "Succeeded",
+        "uniqueIdentifier": "b14a6d83-b7fa-47a9-947c-2a09ae42bced"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_acme_dc01_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[parameters('networkInterfaces_acme_dc01231_name')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "2dacedae-4974-4730-8fb2-bbb143b2de59",
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "etag": "W/\"7158bea5-e795-4b85-8e10-4d547f5abd17\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAddress": "10.0.1.4",
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_acme_dc01_ip_name'))]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_O365Labb_vnet_name'), parameters('subnets_default_name'))]"
+              },
+              "primary": true,
+              "privateIPAddressVersion": "IPv4"
+            }
+          }
+        ],
+        "dnsSettings": {
+          "dnsServers": [],
+          "appliedDnsServers": [],
+          "internalDomainNameSuffix": "psvvgnemgeyelgfwpif1xgj0wa.ax.internal.cloudapp.net"
+        },
+        "macAddress": "00-0D-3A-48-11-E6",
+        "enableAcceleratedNetworking": false,
+        "enableIPForwarding": false,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_acme_dc01_nsg_name'))]"
+        },
+        "primary": true,
+        "tapConfigurations": []
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_acme_dc01_ip_name'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_O365Labb_vnet_name'), parameters('subnets_default_name'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_acme_dc01_nsg_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('networkSecurityGroups_acme_dc01_nsg_name')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "6277d9ba-f7f5-47bd-b1f9-edd6e9372aab",
+        "securityRules": [
+          {
+            "name": "RDP",
+            "etag": "W/\"5344226f-1747-4afe-a13a-133d220b1715\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 300,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          }
+        ],
+        "defaultSecurityRules": [
+          {
+            "name": "AllowVnetInBound",
+            "etag": "W/\"5344226f-1747-4afe-a13a-133d220b1715\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Allow inbound traffic from all VMs in VNET",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 65000,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowAzureLoadBalancerInBound",
+            "etag": "W/\"5344226f-1747-4afe-a13a-133d220b1715\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Allow inbound traffic from azure load balancer",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "AzureLoadBalancer",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 65001,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "DenyAllInBound",
+            "etag": "W/\"5344226f-1747-4afe-a13a-133d220b1715\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Deny all inbound traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 65500,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowVnetOutBound",
+            "etag": "W/\"5344226f-1747-4afe-a13a-133d220b1715\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Allow outbound traffic from all VMs to all VMs in VNET",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 65000,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowInternetOutBound",
+            "etag": "W/\"5344226f-1747-4afe-a13a-133d220b1715\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Allow outbound traffic from all VMs to Internet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "Internet",
+              "access": "Allow",
+              "priority": 65001,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "DenyAllOutBound",
+            "etag": "W/\"5344226f-1747-4afe-a13a-133d220b1715\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Deny all outbound traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 65500,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          }
+        ]
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "sku": {
+        "name": "Basic",
+        "tier": "Regional"
+      },
+      "name": "[parameters('publicIPAddresses_acme_dc01_ip_name')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "677ef3de-c12c-4045-ba03-f7b4099109cc",
+        "ipAddress": "52.157.174.66",
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Dynamic",
+        "idleTimeoutInMinutes": 4,
+        "ipTags": []
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('virtualNetworks_O365Labb_vnet_name')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "3453ab7c-318c-4530-98b6-7a0bbb993ab0",
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.1.0/24"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "default",
+            "etag": "W/\"a35ee187-d2c9-403d-832c-2c30cc4deab7\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "addressPrefix": "10.0.1.0/24",
+              "delegations": []
+            }
+          }
+        ],
+        "virtualNetworkPeerings": [],
+        "enableDdosProtection": false,
+        "enableVmProtection": false
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "Storage",
+      "name": "[parameters('storageAccounts_o365labbdiag_name')]",
+      "apiVersion": "2018-07-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "supportsHttpsTrafficOnly": false,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
+            },
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        }
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "name": "[concat(parameters('networkSecurityGroups_acme_dc01_nsg_name'), '/', parameters('securityRules_RDP_name'))]",
+      "apiVersion": "2018-12-01",
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "protocol": "TCP",
+        "sourcePortRange": "*",
+        "destinationPortRange": "3389",
+        "sourceAddressPrefix": "*",
+        "destinationAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 300,
+        "direction": "Inbound",
+        "sourcePortRanges": [],
+        "destinationPortRanges": [],
+        "sourceAddressPrefixes": [],
+        "destinationAddressPrefixes": []
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_acme_dc01_nsg_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/subnets",
+      "name": "[concat(parameters('virtualNetworks_O365Labb_vnet_name'), '/', parameters('subnets_default_name'))]",
+      "apiVersion": "2018-12-01",
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "addressPrefix": "10.0.1.0/24",
+        "delegations": []
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_O365Labb_vnet_name'))]"
+      ]
+    }
+  ]
+}
