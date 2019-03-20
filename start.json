@@ -23,6 +23,15 @@
       "minLength": 1
     },
 
+    "vmdc01DSCModule": {
+      "type": "string",
+      "defaultValue": "https://github.com/Azure/azure-quickstart-templates/raw/master/active-directory-new-domain-ha-2-dc/DSC/CreateADPDC.zip"
+    },
+    "vmdc01DSCFunction": {
+      "type": "string",
+      "defaultValue": "CreateADPDC.ps1\\CreateADPDC"
+    },
+
     "storageAccounts_o365labbdiag_name": {
       "defaultValue": "o365labbdiag",
       "type": "String"
@@ -31,8 +40,8 @@
       "defaultValue": "O365Labb-vnet",
       "type": "String"
     },
-    "networkInterfaces_acme_dc01231_name": {
-      "defaultValue": "acme-dc01231",
+    "networkInterfaces_acme_dc01": {
+      "defaultValue": "acme-dc01net",
       "type": "String"
     },
     "publicIPAddresses_acme_dc01_ip_name": {
@@ -58,10 +67,34 @@
     "virtualMachines_acme_dc01_id": {
       "defaultValue": "/subscriptions/522cefb5-f9fa-4cb4-9006-46643318ac64/resourceGroups/O365Labb/providers/Microsoft.Compute/disks/acme-dc01_OsDisk_1_ed3933e713e84f5ca4a3f59e54819b4f",
       "type": "String"
+    },
+    "assetLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of resources such as templates and DSC modules that the script is dependent"
+      },
+      "defaultValue": "https://raw.githubusercontent.com/jimmylindo/M365MasterClass/master/"
     }
   },
-  "variables": {},
+  "variables": {
+    "CreateADPDC": "CreateADPDC"
+  },
   "resources": [
+    {
+      "type": "Microsoft.Compute/disks",
+      "apiVersion": "2018-06-01",
+      "name": "[concat(parameters('acme-dc01Name'),'-datadisk1')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": {
+        "creationData": {
+          "createOption": "Empty"
+        },
+        "diskSizeGB": 10
+      }
+    },
     {
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[parameters('acme-dc01Name')]",
@@ -82,20 +115,30 @@
           },
           "osDisk": {
             "osType": "Windows",
-            "name": "[concat(parameters('acme-dc01Name'),'_OsDisk_1_eed12')]",
+            "name": "[concat(parameters('acme-dc01Name'),'_OsDisk_1')]",
             "createOption": "FromImage",
             "caching": "ReadWrite",
             "managedDisk": {
-              "storageAccountType": "StandardSSD_LRS",
-              "id": "[parameters('virtualMachines_acme_dc01_id')]"
+              "storageAccountType": "StandardSSD_LRS"
+
             },
             "diskSizeGB": 127
           },
-          "dataDisks": []
+          "dataDisks": [
+            {
+              "lun": 0,
+              "name": "[concat(parameters('acme-dc01Name'),'-datadisk1')]",
+              "createOption": "attach",
+              "managedDisk": {
+                "id": "[resourceId('Microsoft.Compute/disks/', concat(parameters('acme-dc01Name'),'-datadisk1'))]"
+              }
+            }
+          ]
         },
         "osProfile": {
           "computerName": "[parameters('acme-dc01Name')]",
-          "adminUsername": "sysadmin",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]",
           "windowsConfiguration": {
             "provisionVMAgent": true,
             "enableAutomaticUpdates": true
@@ -106,7 +149,7 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_acme_dc01231_name'))]"
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_acme_dc01'))]"
             }
           ]
         },
@@ -118,10 +161,84 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_acme_dc01231_name'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_acme_dc01'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_o365labbdiag_name'))]"
+      ],
+      "resources": [
+        {
+          "name": "[variables('CreateADPDC')]",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-dc01Name'))]"
+          ],
+          "tags": {
+            "displayName": "[variables('CreateADPDC')]"
+          },
+          "properties": {
+            "publisher": "Microsoft.Powershell",
+            "type": "DSC",
+            "typeHandlerVersion": "2.9",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "ModulesUrl": "[parameters('vmdc01DSCModule')]",
+              "ConfigurationFunction": "[parameters('vmdc01DSCFunction')]",
+              "Properties": {
+                "DomainName": "[parameters('domainName')]",
+                "AdminCreds": {
+                  "UserName": "[parameters('adminUserName')]",
+                  "Password": "PrivateSettingsRef:AdminPassword"
+                }
+              }
+            },
+            "protectedSettings": {
+              "Items": {
+                "AdminPassword": "[parameters('adminPassword')]"
+              }
+            }
+          }
+        }
       ]
     },
+
+    {
+      "name": "updateVNetDNSAddress1",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/',parameters('acme-dc01Name'),'/extensions/CreateADPDC')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('assetLocation'), 'vnetupdate2.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "virtualNetworkName": {
+            "value": "acme-vnet-network"
+          },
+          "addressPrefix": {
+            "value": "10.0.1.0/24"
+          },
+          "subnets": {
+            "value": [
+              {
+                "name": "default",
+                "properties": {
+                  "addressPrefix": "10.0.1.0/24"
+                }
+              }
+            ]
+          },
+          "dnsServers": {
+            "value": [ "10.0.1.4" ]
+          }
+        }
+      }
+    },
+
     {
       "type": "microsoft.devtestlab/schedules",
       "name": "[parameters('schedules_shutdown_computevm_acme_dc01_name')]",
@@ -140,17 +257,17 @@
           "status": "Disabled",
           "timeInMinutes": 30
         },
-        "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_acme_dc01_name'))]",
+        "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-dc01Name'))]",
         "provisioningState": "Succeeded",
         "uniqueIdentifier": "b14a6d83-b7fa-47a9-947c-2a09ae42bced"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_acme_dc01_name'))]"
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-dc01Name'))]"
       ]
     },
     {
       "type": "Microsoft.Network/networkInterfaces",
-      "name": "[parameters('networkInterfaces_acme_dc01231_name')]",
+      "name": "[parameters('networkInterfaces_acme_dc01')]",
       "apiVersion": "2018-12-01",
       "location": "westeurope",
       "tags": {},
@@ -480,4 +597,4 @@
       ]
     }
   ]
-}
+  }
