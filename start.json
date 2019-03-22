@@ -23,6 +23,12 @@
       "minLength": 1
     },
 
+    "acme-cl01Name": {
+      "type": "string",
+      "defaultValue": "acme-cl01",
+      "minLength": 1
+    },
+
     "vmdc01DSCModule": {
       "type": "string",
       "defaultValue": "https://github.com/Azure/azure-quickstart-templates/raw/master/active-directory-new-domain-ha-2-dc/DSC/CreateADPDC.zip"
@@ -240,6 +246,44 @@
     },
 
     {
+      "name": "acme-cl01",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/',parameters('acme-dc01Name'),'/extensions/CreateADPDC')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('assetLocation'), 'vnetupdate2.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "virtualNetworkName": {
+            "value": "acme-vnet-network"
+          },
+          "addressPrefix": {
+            "value": "10.0.1.0/24"
+          },
+          "subnets": {
+            "value": [
+              {
+                "name": "default",
+                "properties": {
+                  "addressPrefix": "10.0.1.0/24"
+                }
+              }
+            ]
+          },
+          "dnsServers": {
+            "value": [ "10.0.1.4" ]
+          }
+        }
+      }
+    },
+
+
+    {
       "type": "microsoft.devtestlab/schedules",
       "name": "[parameters('schedules_shutdown_computevm_acme_dc01_name')]",
       "apiVersion": "2016-05-15",
@@ -265,6 +309,9 @@
         "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-dc01Name'))]"
       ]
     },
+
+
+
     {
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[parameters('networkInterfaces_acme_dc01')]",
