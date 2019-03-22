@@ -6,15 +6,18 @@
       "type": "String"
     },
     "networkInterfaces_name": {
-      "defaultValue": "acme-cl01977",
+      "type": "String"
+    },
+    "virtualNetworks_O365Labb_vnet_name": {
+      "type": "String"
+    },
+    "subnets_default_name": {
       "type": "String"
     },
     "publicIPAddresses_acme_ip_name": {
-      "defaultValue": "acme-cl01-ip",
       "type": "String"
     },
     "schedules_shutdown_computevm_name": {
-      "defaultValue": "shutdown-computevm-acme-cl01",
       "type": "String"
     }
   },
@@ -44,8 +47,7 @@
             "createOption": "FromImage",
             "caching": "ReadWrite",
             "managedDisk": {
-              "storageAccountType": "StandardSSD_LRS",
-              "id": "[parameters('virtualMachines_acme_cl01_id')]"
+              "storageAccountType": "StandardSSD_LRS"
             },
             "diskSizeGB": 127
           },
@@ -121,7 +123,8 @@
                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_acme_ip_name'))]"
               },
               "subnet": {
-                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_O365Win10_vnet_name'), parameters('subnets_default_name'))]"
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_O365Labb_vnet_name'), parameters('subnets_default_name'))]"
+
               },
               "primary": true,
               "privateIPAddressVersion": "IPv4"
@@ -140,8 +143,7 @@
         "tapConfigurations": []
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_acme_ip_name'))]",
-        "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_O365Win10_vnet_name'), parameters('subnets_default_name'))]"
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_acme_ip_name'))]"
       ]
     },
     {
