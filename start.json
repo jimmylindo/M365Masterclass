@@ -707,7 +707,7 @@
         "status": "Enabled",
         "taskType": "ComputeVmShutdownTask",
         "dailyRecurrence": {
-          "time": "0000"
+          "time": "1800"
         },
         "timeZoneId": "W. Europe Standard Time",
         "notificationSettings": {
