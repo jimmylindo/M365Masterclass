@@ -22,12 +22,29 @@
       "defaultValue": "acme-dc01",
       "minLength": 1
     },
-
     "acme-cl01Name": {
       "type": "string",
       "defaultValue": "acme-cl01",
       "minLength": 1
     },
+
+    "acme-cl01-nic": {
+      "type": "string",
+      "defaultValue": "acme-cl01-nic",
+      "minLength": 1
+    },
+
+    "acme-cl01-pip": {
+      "type": "string",
+      "defaultValue": "acme-cl01-pip",
+      "minLength": 1
+    },
+    "acme-cl01-shutdown": {
+      "type": "string",
+      "defaultValue": "acme-cl01-shutdown",
+      "minLength": 1
+    },
+
 
     "vmdc01DSCModule": {
       "type": "string",
@@ -204,6 +221,27 @@
               }
             }
           }
+        },
+        {
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "ACME-DC01/CustomScript",
+          "apiVersion": "2015-06-15",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-dc01Name'))]",
+            "[concat('Microsoft.Compute/virtualMachines/',parameters('acme-dc01Name'),'/extensions/CreateADPDC')]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.4",
+            "settings": {
+              "fileUris": [
+                "[concat(parameters('assetLocation'),'acme-dc01.ps1')]"
+              ],
+              "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -File acme-dc01.ps1"
+            }
+          }
         }
       ]
     },
@@ -244,44 +282,6 @@
         }
       }
     },
-
-    {
-      "name": "acme-cl01",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2015-01-01",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/',parameters('acme-dc01Name'),'/extensions/CreateADPDC')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('assetLocation'), 'vnetupdate2.json')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "virtualNetworkName": {
-            "value": "acme-vnet-network"
-          },
-          "addressPrefix": {
-            "value": "10.0.1.0/24"
-          },
-          "subnets": {
-            "value": [
-              {
-                "name": "default",
-                "properties": {
-                  "addressPrefix": "10.0.1.0/24"
-                }
-              }
-            ]
-          },
-          "dnsServers": {
-            "value": [ "10.0.1.4" ]
-          }
-        }
-      }
-    },
-
 
     {
       "type": "microsoft.devtestlab/schedules",
@@ -531,7 +531,6 @@
       "properties": {
         "provisioningState": "Succeeded",
         "resourceGuid": "677ef3de-c12c-4045-ba03-f7b4099109cc",
-        "ipAddress": "52.157.174.66",
         "publicIPAddressVersion": "IPv4",
         "publicIPAllocationMethod": "Dynamic",
         "idleTimeoutInMinutes": 4,
@@ -642,6 +641,153 @@
       "dependsOn": [
         "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_O365Labb_vnet_name'))]"
       ]
+    },
+
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('acme-cl01Name')]",
+      "apiVersion": "2018-10-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D2_v2"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsDesktop",
+            "offer": "Windows-10",
+            "sku": "rs5-pro",
+            "version": "latest"
+          },
+          "osDisk": {
+            "osType": "Windows",
+            "name": "[concat(parameters('acme-cl01Name'),'_OsDisk_1_3b298d1d426844738a4e08aaab520d3f')]",
+            "createOption": "FromImage",
+            "caching": "ReadWrite",
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            },
+            "diskSizeGB": 127
+          },
+          "dataDisks": []
+        },
+        "osProfile": {
+          "computerName": "[parameters('acme-cl01Name')]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]",
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "enableAutomaticUpdates": true
+          },
+          "secrets": [],
+          "allowExtensionOperations": true
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('acme-cl01-nic'))]"
+            }
+          ]
+        },
+        "licenseType": "Windows_Client"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('acme-cl01-nic'))]"
+      ]
+    },
+    {
+      "type": "microsoft.devtestlab/schedules",
+      "name": "[parameters('acme-cl01-shutdown')]",
+      "apiVersion": "2016-05-15",
+      "location": "westeurope",
+      "scale": null,
+      "properties": {
+        "status": "Enabled",
+        "taskType": "ComputeVmShutdownTask",
+        "dailyRecurrence": {
+          "time": "0000"
+        },
+        "timeZoneId": "W. Europe Standard Time",
+        "notificationSettings": {
+          "status": "Disabled",
+          "timeInMinutes": 30
+        },
+        "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-cl01Name'))]",
+        "provisioningState": "Succeeded",
+        "uniqueIdentifier": "e84ce513-7ebf-46d6-ad61-8cf703f7787a"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-cl01Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[parameters('acme-cl01-nic')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "c20f3606-9dc7-49d4-b77a-aa197bc587cb",
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "etag": "W/\"3552c2e4-01f8-4197-bca0-9bc91dcd8e5c\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('acme-cl01-pip'))]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_O365Labb_vnet_name'), parameters('subnets_default_name'))]"
+
+              },
+              "primary": true,
+              "privateIPAddressVersion": "IPv4"
+            }
+          }
+        ],
+        "dnsSettings": {
+          "dnsServers": [],
+          "appliedDnsServers": [],
+          "internalDomainNameSuffix": "dojvma22wz2evlbnxwuspcippa.ax.internal.cloudapp.net"
+        },
+        "macAddress": "00-0D-3A-20-D7-8B",
+        "enableAcceleratedNetworking": false,
+        "enableIPForwarding": false,
+        "primary": true,
+        "tapConfigurations": []
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('acme-cl01-pip'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "sku": {
+        "name": "Basic",
+        "tier": "Regional"
+      },
+      "name": "[parameters('acme-cl01-pip')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "67d40a21-39c5-4440-8be5-abaf09625396",
+        "ipAddress": "40.115.28.33",
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Dynamic",
+        "idleTimeoutInMinutes": 4,
+        "ipTags": []
+      },
+      "dependsOn": []
     }
+
   ]
-  }
+}
