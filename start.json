@@ -14,6 +14,11 @@
       "minLength": 1,
       "defaultValue": "sysadmin"
     },
+    "AdminUserNameFQDN": {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue": "sysadmin@corp.acme.com"
+    },
     "AdminPassword": {
       "type": "securestring"
     },
@@ -45,6 +50,47 @@
       "minLength": 1
     },
 
+    "acme-cl02Name": {
+      "type": "string",
+      "defaultValue": "acme-cl02",
+      "minLength": 1
+    },
+
+    "acme-cl02-nic": {
+      "type": "string",
+      "defaultValue": "acme-cl02-nic",
+      "minLength": 1
+    },
+
+    "acme-cl02-pip": {
+      "type": "string",
+      "defaultValue": "acme-cl02-pip",
+      "minLength": 1
+    },
+    "acme-cl02-shutdown": {
+      "type": "string",
+      "defaultValue": "acme-cl02-shutdown",
+      "minLength": 1
+    },
+
+    "acme-me01Name": {
+      "type": "string",
+      "defaultValue": "acme-me01",
+      "minLength": 1
+    },
+    "acme-me01-nic": {
+      "type": "string",
+      "defaultValue": "acme-me01-nic",
+      "minLength": 1
+    },
+    "publicIPAddresses_acme_me01_ip_name": {
+      "defaultValue": "acme-me01-ip",
+      "type": "String"
+    },
+    "networkSecurityGroups_acme_me01_nsg_name": {
+      "defaultValue": "acme-me01-nsg",
+      "type": "String"
+    },
 
     "vmdc01DSCModule": {
       "type": "string",
@@ -261,7 +307,7 @@
         },
         "parameters": {
           "virtualNetworkName": {
-            "value": "acme-vnet-network"
+            "value": "[parameters('virtualNetworks_O365Labb_vnet_name')]"
           },
           "addressPrefix": {
             "value": "10.0.1.0/24"
@@ -695,8 +741,44 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', parameters('acme-cl01-nic'))]"
+      ],
+
+
+      "resources": [
+        {
+          "name": "ACME-CL01/JoinDomain",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-cl01Name'))]",
+            "Microsoft.Resources/deployments/updateVNetDNSAddress1"
+          ],
+          "tags": {
+            "displayName": "ACME-CL01/JoinDomain"
+          },
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "JsonADDomainExtension",
+            "typeHandlerVersion": "1.3",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "Name": "[parameters('domainName')]",
+              "User": "[parameters('AdminUserNameFQDN')]",
+              "Restart": "true",
+              "Options": "3",
+              "OUpath": "OU=Computers; OU=ACME; DC=corp; DC=acme; DC=com"
+            },
+            "protectedsettings": {
+              "Password": "[parameters('adminPassword')]"
+            }
+          }
+        }
       ]
     },
+
+
+    /*
     {
       "type": "microsoft.devtestlab/schedules",
       "name": "[parameters('acme-cl01-shutdown')]",
@@ -719,9 +801,12 @@
         "uniqueIdentifier": "e84ce513-7ebf-46d6-ad61-8cf703f7787a"
       },
       "dependsOn": [
+
         "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-cl01Name'))]"
       ]
     },
+    */
+
     {
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[parameters('acme-cl01-nic')]",
@@ -763,7 +848,8 @@
         "tapConfigurations": []
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('acme-cl01-pip'))]"
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('acme-cl01-pip'))]",
+        "Microsoft.Resources/deployments/updateVNetDNSAddress1"
       ]
     },
     {
@@ -787,7 +873,514 @@
         "ipTags": []
       },
       "dependsOn": []
+    },
+
+
+
+
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('acme-cl02Name')]",
+      "apiVersion": "2018-10-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D2_v2"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsDesktop",
+            "offer": "Windows-10",
+            "sku": "rs5-pro",
+            "version": "latest"
+          },
+          "osDisk": {
+            "osType": "Windows",
+            "name": "[concat(parameters('acme-cl02Name'),'_OsDisk_1_3b298d1d426844738a4e08aaab520d3f')]",
+            "createOption": "FromImage",
+            "caching": "ReadWrite",
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            },
+            "diskSizeGB": 127
+          },
+          "dataDisks": []
+        },
+        "osProfile": {
+          "computerName": "[parameters('acme-cl02Name')]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]",
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "enableAutomaticUpdates": true
+          },
+          "secrets": [],
+          "allowExtensionOperations": true
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('acme-cl02-nic'))]"
+            }
+          ]
+        },
+        "licenseType": "Windows_Client"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('acme-cl02-nic'))]"
+      ],
+
+
+      "resources": [
+        {
+          "name": "ACME-CL02/JoinDomain",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-cl02Name'))]",
+            "Microsoft.Resources/deployments/updateVNetDNSAddress1"
+          ],
+          "tags": {
+            "displayName": "ACME-CL02/JoinDomain"
+          },
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "JsonADDomainExtension",
+            "typeHandlerVersion": "1.3",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "Name": "[parameters('domainName')]",
+              "User": "[parameters('AdminUserNameFQDN')]",
+              "Restart": "true",
+              "Options": "3",
+              "OUpath": "OU=Computers; OU=ACME; DC=corp; DC=acme; DC=com"
+            },
+            "protectedsettings": {
+              "Password": "[parameters('adminPassword')]"
+            }
+          }
+        }
+      ]
+    },
+
+
+    /*
+    {
+      "type": "microsoft.devtestlab/schedules",
+      "name": "[parameters('acme-cl01-shutdown')]",
+      "apiVersion": "2016-05-15",
+      "location": "westeurope",
+      "scale": null,
+      "properties": {
+        "status": "Enabled",
+        "taskType": "ComputeVmShutdownTask",
+        "dailyRecurrence": {
+          "time": "1800"
+        },
+        "timeZoneId": "W. Europe Standard Time",
+        "notificationSettings": {
+          "status": "Disabled",
+          "timeInMinutes": 30
+        },
+        "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-cl01Name'))]",
+        "provisioningState": "Succeeded",
+        "uniqueIdentifier": "e84ce513-7ebf-46d6-ad61-8cf703f7787a"
+      },
+      "dependsOn": [
+
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-cl01Name'))]"
+      ]
+    },
+    */
+
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[parameters('acme-cl02-nic')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "c20f3606-9dc7-49d4-b77a-aa197bc587cb",
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "etag": "W/\"3552c2e4-01f8-4197-bca0-9bc91dcd8e5c\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('acme-cl02-pip'))]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_O365Labb_vnet_name'), parameters('subnets_default_name'))]"
+
+              },
+              "primary": true,
+              "privateIPAddressVersion": "IPv4"
+            }
+          }
+        ],
+        "dnsSettings": {
+          "dnsServers": [],
+          "appliedDnsServers": [],
+          "internalDomainNameSuffix": "dojvma22wz2evlbnxwuspcippa.ax.internal.cloudapp.net"
+        },
+        "macAddress": "00-0D-3A-20-D7-8B",
+        "enableAcceleratedNetworking": false,
+        "enableIPForwarding": false,
+        "primary": true,
+        "tapConfigurations": []
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('acme-cl02-pip'))]",
+        "Microsoft.Resources/deployments/updateVNetDNSAddress1"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "sku": {
+        "name": "Basic",
+        "tier": "Regional"
+      },
+      "name": "[parameters('acme-cl02-pip')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "67d40a21-39c5-4440-8be5-abaf09625396",
+        "ipAddress": "40.115.28.33",
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Dynamic",
+        "idleTimeoutInMinutes": 4,
+        "ipTags": []
+      },
+      "dependsOn": []
+    },
+
+
+
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('acme-me01Name')]",
+      "apiVersion": "2018-10-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D2s_v3"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2019-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "osType": "Windows",
+            "name": "[concat(parameters('acme-me01Name'),'_OsDisk_1_12e4eeffc1cf4044ae527bb78c5ccbe0')]",
+            "createOption": "FromImage",
+            "caching": "ReadWrite",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            },
+            "diskSizeGB": 127
+          },
+          "dataDisks": []
+        },
+        "osProfile": {
+          "computerName": "[parameters('acme-me01Name')]",
+          "adminUsername": "[parameters('AdminUserName')]",
+          "adminPassword": "[parameters('AdminPassword')]",
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "enableAutomaticUpdates": true
+          },
+          "secrets": [],
+          "allowExtensionOperations": true
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('acme-me01-nic'))]"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('acme-me01-nic'))]"
+      ],
+      "resources": [
+        {
+          "name": "ACME-ME01/JoinDomain",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-me01Name'))]"
+          ],
+          "tags": {
+            "displayName": "ACME-me01/JoinDomain"
+          },
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "JsonADDomainExtension",
+            "typeHandlerVersion": "1.3",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "Name": "[parameters('domainName')]",
+              "User": "[parameters('AdminUserNameFQDN')]",
+              "Restart": "true",
+              "Options": "3",
+              "OUpath": "OU=Servers; OU=ACME; DC=corp; DC=acme; DC=com"
+            },
+            "protectedsettings": {
+              "Password": "[parameters('adminPassword')]"
+            }
+          }
+        }
+
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[parameters('acme-me01-nic')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "6a4f2452-d4cc-4c77-81e7-d0ea35136d7b",
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "etag": "W/\"a6de876e-6f3d-4de0-92bb-17f8c620e337\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_acme_me01_ip_name'))]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_O365Labb_vnet_name'), parameters('subnets_default_name'))]"
+              },
+              "primary": true,
+              "privateIPAddressVersion": "IPv4"
+            }
+          }
+        ],
+        "dnsSettings": {
+          "dnsServers": [],
+          "appliedDnsServers": [],
+          "internalDomainNameSuffix": "xqfnepulmejefapl5h5ifsm1qf.ax.internal.cloudapp.net"
+        },
+        "macAddress": "00-0D-3A-21-80-7B",
+        "enableAcceleratedNetworking": false,
+        "enableIPForwarding": false,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_acme_me01_nsg_name'))]"
+        },
+        "primary": true,
+        "tapConfigurations": []
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_acme_me01_ip_name'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_O365Labb_vnet_name'), parameters('subnets_default_name'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_acme_me01_nsg_name'))]",
+        "Microsoft.Resources/deployments/updateVNetDNSAddress1"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('networkSecurityGroups_acme_me01_nsg_name')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "a49d5c62-0932-44f6-9cbc-a84064e14ae4",
+        "securityRules": [
+          {
+            "name": "RDP",
+            "etag": "W/\"3b5f7f39-04fa-4bfb-a0e3-d2ebb5511072\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 300,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          }
+        ],
+        "defaultSecurityRules": [
+          {
+            "name": "AllowVnetInBound",
+            "etag": "W/\"3b5f7f39-04fa-4bfb-a0e3-d2ebb5511072\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Allow inbound traffic from all VMs in VNET",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 65000,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowAzureLoadBalancerInBound",
+            "etag": "W/\"3b5f7f39-04fa-4bfb-a0e3-d2ebb5511072\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Allow inbound traffic from azure load balancer",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "AzureLoadBalancer",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 65001,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "DenyAllInBound",
+            "etag": "W/\"3b5f7f39-04fa-4bfb-a0e3-d2ebb5511072\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Deny all inbound traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 65500,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowVnetOutBound",
+            "etag": "W/\"3b5f7f39-04fa-4bfb-a0e3-d2ebb5511072\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Allow outbound traffic from all VMs to all VMs in VNET",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 65000,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowInternetOutBound",
+            "etag": "W/\"3b5f7f39-04fa-4bfb-a0e3-d2ebb5511072\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Allow outbound traffic from all VMs to Internet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "Internet",
+              "access": "Allow",
+              "priority": 65001,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "DenyAllOutBound",
+            "etag": "W/\"3b5f7f39-04fa-4bfb-a0e3-d2ebb5511072\"",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "description": "Deny all outbound traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 65500,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          }
+        ]
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "sku": {
+        "name": "Basic",
+        "tier": "Regional"
+      },
+      "name": "[parameters('publicIPAddresses_acme_me01_ip_name')]",
+      "apiVersion": "2018-12-01",
+      "location": "westeurope",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "provisioningState": "Succeeded",
+        "resourceGuid": "68665f98-dffb-401b-9fe9-72d223a28843",
+        "ipAddress": "51.144.173.4",
+        "publicIPAddressVersion": "IPv4",
+        "publicIPAllocationMethod": "Dynamic",
+        "idleTimeoutInMinutes": 4,
+        "ipTags": []
+      },
+      "dependsOn": []
     }
+
+
+
+
 
   ]
 }
