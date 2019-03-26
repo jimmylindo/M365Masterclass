@@ -83,6 +83,16 @@
       "defaultValue": "acme-me01-nic",
       "minLength": 1
     },
+
+    "vmme01DSCModule": {
+      "type": "string",
+      "defaultValue": "https://raw.githubusercontent.com/jimmylindo/M365MasterClass/master/CreateHyperV.zip"
+    },
+    "vmme01DSCFunction": {
+      "type": "string",
+      "defaultValue": "CreateHyperV.ps1\\CreateHyperV"
+    },
+
     "publicIPAddresses_acme_me01_ip_name": {
       "defaultValue": "acme-me01-ip",
       "type": "String"
@@ -146,7 +156,8 @@
     }
   },
   "variables": {
-    "CreateADPDC": "CreateADPDC"
+    "CreateADPDC": "CreateADPDC",
+    "CreateHyperV": "CreateHyperV"
   },
   "resources": [
     {
@@ -1146,7 +1157,38 @@
               "Password": "[parameters('adminPassword')]"
             }
           }
-        }
+        },
+/*
+        {
+          "name": "[variables('CreateHyperV')]",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-me01Name'))]"
+          ],
+          "tags": {
+            "displayName": "[variables('CreateHyperV')]"
+          },
+          "properties": {
+            "publisher": "Microsoft.Powershell",
+            "type": "DSC",
+            "typeHandlerVersion": "2.9",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "ModulesUrl": "[parameters('vmme01DSCModule')]",
+              "ConfigurationFunction": "[parameters('vmme01DSCFunction')]",
+              "Properties": {
+                }
+              }
+            },
+            "protectedSettings": {
+              "Items": {
+                "AdminPassword": "[parameters('adminPassword')]"
+              }
+            }
+          
+        } */
 
       ]
     },
