@@ -1192,6 +1192,7 @@
           "apiVersion": "2015-06-15",
           "location": "[resourceGroup().location]",
           "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('acme-me01Name'))]",
             "[concat('Microsoft.Compute/virtualMachines/',parameters('acme-me01Name'),'/extensions/CreateHyperV')]"
           ],
           "properties": {
