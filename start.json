@@ -1158,7 +1158,7 @@
             }
           }
         },
-/*
+
         {
           "name": "[variables('CreateHyperV')]",
           "type": "extensions",
@@ -1182,13 +1182,9 @@
                 }
               }
             },
-            "protectedSettings": {
-              "Items": {
-                "AdminPassword": "[parameters('adminPassword')]"
-              }
-            }
+
           
-        } */
+        } 
 
       ]
     },
