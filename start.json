@@ -1179,12 +1179,33 @@
               "ModulesUrl": "[parameters('vmme01DSCModule')]",
               "ConfigurationFunction": "[parameters('vmme01DSCFunction')]",
               "Properties": {
-                }
               }
-            },
+            }
+          }
 
-          
-        } 
+
+        },
+
+        {
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "ACME-ME01/CustomScript",
+          "apiVersion": "2015-06-15",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/',parameters('acme-me01Name'),'/extensions/CreateHyperV')]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.4",
+            "settings": {
+              "fileUris": [
+                "[concat(parameters('assetLocation'),'acme-me01.ps1')]"
+              ],
+              "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -File acme-me01.ps1"
+            }
+          }
+        }
 
       ]
     },
