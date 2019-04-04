@@ -110,11 +110,12 @@
       "type": "string",
       "defaultValue": "CreateADPDC.ps1\\CreateADPDC"
     },
-
+    /*
     "storageAccounts_o365labbdiag_name": {
       "defaultValue": "o365labbdiag",
       "type": "String"
     },
+    */
     "virtualNetworks_O365Labb_vnet_name": {
       "defaultValue": "O365Labb-vnet",
       "type": "String"
@@ -233,13 +234,14 @@
             }
           ]
         },
+        /*
         "diagnosticsProfile": {
           "bootDiagnostics": {
             "enabled": true,
             "storageUri": "[concat('https', '://', parameters('storageAccounts_o365labbdiag_name'), '.blob.core.windows.net', '/')]"
           }
-        }
-      },
+        } */
+  },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_acme_dc01'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_o365labbdiag_name'))]"
@@ -627,6 +629,7 @@
       },
       "dependsOn": []
     },
+    /*
     {
       "type": "Microsoft.Storage/storageAccounts",
       "sku": {
@@ -661,6 +664,7 @@
       },
       "dependsOn": []
     },
+    */
     {
       "type": "Microsoft.Network/networkSecurityGroups/securityRules",
       "name": "[concat(parameters('networkSecurityGroups_acme_dc01_nsg_name'), '/', parameters('securityRules_RDP_name'))]",
