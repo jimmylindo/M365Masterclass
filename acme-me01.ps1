@@ -5,8 +5,8 @@ Import-Module BitsTransfer
 Start-BitsTransfer -Source $url -Destination $output
 Write-Output "Time taken: $((Get-Date).Subtract($start_time).Seconds) second(s)"
 
-$url2 = "https://deploymentimages.blob.core.windows.net/windows10/Create_diff_VM.ps1"
-$output2 = "C:\VMS\Script\Create_diff_VM.ps1"
+$url2 = "https://deploymentimages.blob.core.windows.net/windows10/module4-create-vm.ps1"
+$output2 = "C:\VMS\Scripts\module4-create-vm.ps1"
 $start_time = Get-Date
 Import-Module BitsTransfer
 Start-BitsTransfer -Source $url2 -Destination $output2
