@@ -80,3 +80,6 @@ New-SmbShare -name resources -Path C:\temp -FullAccess "corp\Domain Users"
                  -PasswordNotRequired $true
 
         }
+
+#Download Exchange Media
+    Start-BitsTransfer -Source https://deploymentimages.blob.core.windows.net/windows10/mu_exchange_server_2019_cumulative_update_1_x64_dvd_6c695b62.iso -Destination C:\Temp
