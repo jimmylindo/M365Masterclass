@@ -1,4 +1,4 @@
-﻿$url = "https://deploymentimages.blob.core.windows.net/windows10/W10REF.vhdx"
+﻿$url = "https://deploymentimages.blob.core.windows.net/windows10/_W10REF1903.vhdx"
 $output = "C:\VMS\Templates\W10REF.vhdx"
 $start_time = Get-Date
 Import-Module BitsTransfer
